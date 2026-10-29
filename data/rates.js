@@ -11,6 +11,7 @@
      share      share of the stake that earns rewards (1 = all of it)
      compounds  false = simple interest, the reinvest switch does not apply
      promo      part of the figure is a limited-time promotion
+     prot       per exchange: level "none" (not regulated) or "unknown" (not stated), a short label and the long text shown in Details
      eu         "yes" | "unknown"  (rows not offered to EU clients are listed under `unavailable`)
 */
 window.STAKING_DATA = {
@@ -35,8 +36,7 @@ window.STAKING_DATA = {
       country: 'Malta',
       licenceDate: '2025-01-27',
       verifyUrl: 'https://casptracker.eu/?q=okx.com#casp-list',
-      regWarn: false,
-      regNote: 'OKX calls these rewards variable estimates and not guaranteed. Smart-contract and slashing risk apply.',
+      prot: { level: 'unknown', short: 'Status not stated', long: 'OKX does not say whether these products are regulated. It calls the rewards variable estimates, not guaranteed, with smart-contract and slashing risk.' },
       unavailable: {
         LINK: 'OKX Europe does not list LINK among its On-chain Earn products.'
       },
@@ -78,7 +78,7 @@ window.STAKING_DATA = {
       country: 'Austria',
       licenceDate: '2025-05-28',
       verifyUrl: 'https://casptracker.eu/?q=bybit.eu#casp-list',
-      regNote: 'Bybit says Earn is not a MiCAR-regulated product: subscribing transfers ownership of your assets to Bybit EU GmbH and MiCAR client-asset protections do not apply.',
+      prot: { level: 'none', short: 'Not MiCAR-regulated', long: 'Bybit says Earn is not a MiCAR-regulated product. Subscribing transfers ownership of your assets to Bybit EU GmbH and MiCAR client-asset protections do not apply.' },
       unavailable: {},
       products: {
         ETH: [
@@ -144,7 +144,7 @@ window.STAKING_DATA = {
       country: 'Ireland',
       licenceDate: '2025-06-25',
       verifyUrl: 'https://casptracker.eu/?q=kraken.com#casp-list',
-      regNote: 'Kraken\'s EEA terms say staking is provided by Payward Commercial Ltd. (British Virgin Islands) and is not a regulated activity in the EEA. Kraken\'s MiCA licence page does not list staking among the licensed services.',
+      prot: { level: 'none', short: 'Not regulated in the EEA', long: 'Kraken\'s EEA terms say staking is provided by Payward Commercial Ltd. (British Virgin Islands) and is not a regulated activity in the EEA. Kraken\'s MiCA licence page does not list staking among the licensed services.' },
       unavailable: {
         LINK: 'Kraken offers no LINK staking to clients in the EEA.',
         USDC: 'Kraken says Opt-In Rewards in the EEA are available for Bitcoin only, so USDC rewards are not offered to EEA clients.'

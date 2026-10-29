@@ -20,7 +20,7 @@
   function assetBy(sym) { return ASSETS.filter(function (a) { return a.symbol === sym; })[0]; }
 
   /* ---------- state ---------- */
-  var state = { asset: ASSETS[0].symbol, amount: 10000, unit: 'eur', months: 12, rcase: 'mid', compound: true, prod: {} };
+  var state = { asset: ASSETS[0].symbol, amount: 10000, unit: 'eur', months: 12, rcase: 'mid', compound: true, prod: {}, details: false };
   var EUR_PRESETS = [1000, 5000, 10000, 50000];
   var DUR_PRESETS = [[3, '3 mo'], [6, '6 mo'], [12, '1 yr'], [24, '2 yr'], [36, '3 yr'], [60, '5 yr']];
 
@@ -266,6 +266,12 @@
     });
     $('compound').addEventListener('change', function (e) { state.compound = e.target.checked; update(); });
 
+    $('cards').addEventListener('click', function (ev) {
+      if (!ev.target.closest('[data-more]')) return;
+      state.details = !state.details;
+      Array.prototype.forEach.call($('cards').querySelectorAll('[data-more]'), function (b) { b.setAttribute('aria-expanded', String(state.details)); });
+      Array.prototype.forEach.call($('cards').querySelectorAll('.c-detail'), function (p) { p.hidden = !state.details; });
+    });
     $('cards').addEventListener('change', function (e) {
       var s = e.target.closest('select[data-ex]');
       if (!s) return;
@@ -298,6 +304,13 @@
   }
 
   /* ---------- cards ---------- */
+  function protIcon(level) {
+    return level === 'none'
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.7 14a6.9 6.9 0 0 0 .3-2V5l-8-3-3.2 1.2"/><path d="m2 2 20 20"/><path d="M4.7 4.7 4 5v7c0 6 8 10 8 10a20.3 20.3 0 0 0 5.6-4.4"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+  }
+  var CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
   function renderCards() {
     var host = $('cards');
     var focusEx = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-ex');
@@ -316,49 +329,61 @@
 
     host.innerHTML = rows.map(function (r) {
       var ex = r.ex, p = r.p;
-      var lic = '<p class="lic">Exchange licensed under MiCA: ' + esc(ex.entity) + ', ' + esc(ex.authorityShort) + ' (' + esc(ex.country) +
-        '), since ' + esc(dateShort(ex.licenceDate)) + '. <a href="' + esc(ex.verifyUrl) + '" rel="noopener">Verify</a></p>';
-      var head = '<div class="card-head"><img class="logo" src="' + esc(ex.logo) + '" alt="' + esc(ex.name) + '" width="36" height="36">' +
-        '<div><h3>' + esc(ex.name) + '</h3></div>' +
-        (best && best.ex === ex ? '<span class="badge">Highest reward</span>' : '') + '</div>' + lic;
+      var isBest = best && best.ex === ex;
+      var head = '<div class="c-head"><img class="logo" src="' + esc(ex.logo) + '" alt="' + esc(ex.name) + '" width="36" height="36">' +
+        '<h3>' + esc(ex.name) + '</h3>' + (isBest ? '<span class="badge">Highest reward</span>' : '') + '</div>';
 
       if (!p) {
         var why = (ex.unavailable && ex.unavailable[state.asset]) || 'No staking product found for ' + state.asset + ' for EU clients.';
-        return '<article class="card" style="--xc:' + ex.color + '">' + head +
-          '<p class="empty"><strong>Not available</strong>' + esc(why) + '</p></article>';
+        return '<article class="card dim">' + head + '<div class="c-na"><strong>Not available</strong>' + esc(why) + '</div></article>';
       }
 
       var arr = products(ex);
       var prod = arr.length > 1
-        ? '<div class="prod"><label class="sr" for="p-' + ex.key + '">Product on ' + esc(ex.name) + '</label><select id="p-' + ex.key + '" data-ex="' + ex.key + '">' +
+        ? '<div class="c-prod"><label class="sr" for="p-' + ex.key + '">Product on ' + esc(ex.name) + '</label><select id="p-' + ex.key + '" data-ex="' + ex.key + '">' +
           arr.map(function (x) {
             return '<option value="' + esc(x.id) + '"' + (x.id === p.id ? ' selected' : '') + '>' + esc(x.label) + '</option>';
           }).join('') + '</select></div>'
-        : '<div class="prod-one">' + esc(p.label) + '</div>';
+        : '<div class="c-prod">' + esc(p.label) + '</div>';
 
       var rate = rateOf(p, state.rcase);
       var bal = state.amount + r.reward;
-      var warns = [];
-      if (p.promo) warns.push('Part of this rate is a limited-time promotion and may drop.');
-      if (p.tiered) warns.push('The rate depends on balance or bonus tiers. Check the source.');
-      if (p.termDays > 0 && state.months * 30 < p.termDays) warns.push('Locked for ' + p.termDays + ' days, longer than your ' + durText(state.months) + '.');
-      if (p.eu === 'unknown') warns.push('EU availability could not be confirmed.');
+      var rateSub = [];
+      if (net(p) < 1) {
+        var why2 = [];
+        if (p.fee) why2.push(p.fee + '% commission');
+        if (p.share != null && p.share < 1) why2.push('earns on ' + Math.round(p.share * 100) + '% of the stake');
+        rateSub.push('<small>' + esc(pct(grossOf(p, state.rcase)) + ' published, after ' + why2.join(', ')) + '</small>');
+      }
+      if (p.promo) rateSub.push('<small class="warn">Promo rate, may drop</small>');
+      if (p.compounds === false) rateSub.push('<small>Simple interest, not compounded</small>');
+      if (p.tiered) rateSub.push('<small class="warn">Depends on balance tiers</small>');
+      if (p.min !== p.max) rateSub.push('<small>Published ' + esc(pct(p.min)) + ' to ' + esc(pct(p.max)) + '</small>');
 
-      var reg = ex.regNote ? '<p class="reg' + (ex.regWarn === false ? '' : ' reg-warn') + '"><strong>About this product.</strong> ' + esc(ex.regNote) + '</p>' : '';
-      return '<article class="card' + (best && best.ex === ex ? ' best' : '') + '" style="--xc:' + ex.color + '">' + head + prod +
-        '<div class="big">' + esc(fmtSigned(r.reward)) + '</div>' +
-        '<div class="sub">after ' + esc(durText(state.months)) + ', balance ' + esc(fmt(bal)) + '</div>' +
-        '<dl class="facts">' +
-        '<dt>Rate used</dt><dd>' + esc(pct(rate)) + ' ' + esc(p.kind) + (net(p) < 1 ? ' net' : '') + '</dd>' +
-        (net(p) < 1 ? '<dt>Published</dt><dd>' + esc(pct(grossOf(p, state.rcase))) + ' before commission</dd>' : '') +
-        (p.min !== p.max ? '<dt>Published range</dt><dd>' + esc(pct(p.min)) + ' to ' + esc(pct(p.max)) + '</dd>' : '') +
-        (p.compounds === false ? '<dt>Interest</dt><dd>Simple, not compounded</dd>' : '') +
-        '<dt>Lock-up</dt><dd>' + (p.termDays > 0 ? esc(p.termDays + ' days') : esc(p.lock || 'Flexible')) + '</dd>' +
+      var lockText = p.termDays > 0 ? p.termDays + ' days' : (p.lock || 'Flexible');
+      var lockSub = (p.termDays > 0 && state.months * 30 < p.termDays)
+        ? '<small class="warn">Longer than your ' + esc(durText(state.months)) + '</small>' : '';
+
+      var prot = ex.prot || { level: 'unknown', short: 'Status not stated', long: '' };
+      var detail = '<dl>' +
+        '<dt>Product</dt><dd>' + esc(p.label) + '</dd>' +
+        '<dt>Protection</dt><dd>' + esc(prot.long) + '</dd>' +
+        (p.note ? '<dt>Good to know</dt><dd>' + esc(p.note) + '</dd>' : '') +
         (p.minAmount ? '<dt>Minimum</dt><dd>' + esc(p.minAmount) + '</dd>' : '') +
-        '</dl>' +
-        (warns.length ? '<ul class="warns">' + warns.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' : '') +
-        (p.note ? '<p class="lic">' + esc(p.note) + '</p>' : '') + reg +
-        '<div class="card-foot"><a href="' + esc(p.source) + '" rel="noopener nofollow" target="_blank">Source: ' + esc(ex.name) + '</a><span>Read ' + esc(dateShort(p.readOn)) + '</span></div>' +
+        (p.eu === 'unknown' ? '<dt>EU availability</dt><dd>Could not be confirmed.</dd>' : '') +
+        '<dt>Exchange licence</dt><dd>' + esc(ex.entity) + ', ' + esc(ex.authorityShort) + ' (' + esc(ex.country) + '), licensed ' + esc(dateShort(ex.licenceDate)) +
+        '. <a href="' + esc(ex.verifyUrl) + '" rel="noopener">Verify</a></dd>' +
+        '<dt>Source</dt><dd><a href="' + esc(p.source) + '" rel="noopener nofollow" target="_blank">' + esc(ex.name) + ' page</a>, read ' + esc(dateShort(p.readOn)) + '</dd>' +
+        '</dl>';
+
+      return '<article class="card">' + head + prod +
+        '<div class="c-reward"><div class="big">' + esc(fmtSigned(r.reward)) + '</div>' +
+        '<div class="sub">after ' + esc(durText(state.months)) + ', balance ' + esc(fmt(bal)) + '</div></div>' +
+        '<div class="c-row"><span>Rate</span><span class="v">' + esc(pct(rate)) + ' ' + esc(p.kind) + (net(p) < 1 ? ' net' : '') + rateSub.join('') + '</span></div>' +
+        '<div class="c-row"><span>Lock-up</span><span class="v">' + esc(lockText) + lockSub + '</span></div>' +
+        '<div class="c-prot"><span class="pill ' + esc(prot.level) + '">' + protIcon(prot.level) + esc(prot.short) + '</span></div>' +
+        '<div class="c-more"><button type="button" class="more-btn" data-more aria-expanded="' + state.details + '" aria-controls="det-' + ex.key + '"><span>Details, all cards</span>' + CHEV + '</button>' +
+        '<div class="c-detail" id="det-' + ex.key + '"' + (state.details ? '' : ' hidden') + '>' + detail + '</div></div>' +
         '</article>';
     }).join('');
 
