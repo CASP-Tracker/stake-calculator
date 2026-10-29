@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stake Calculator for EU | Staking rewards Calculator for the EU</title>
+<meta name="description" content="Staking rewards Calculator for the EU. Compare staking rates for ETH, BTC, USDC, LINK, POL and ATOM on MiCA-licensed exchanges: OKX, Bybit and Kraken.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://casp-tracker.github.io/stake-calculator/">
+<meta property="og:title" content="Stake Calculator for EU">
+<meta property="og:description" content="Staking rewards Calculator for the EU. Compare OKX, Bybit and Kraken.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://casp-tracker.github.io/stake-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f4ed8'/%3E%3Cpath d='M7 22l6-7 4 4 8-10' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="./" aria-label="Stake Calculator for EU">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M7 22l6-7 4 4 8-10" fill="none" stroke="var(--bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Stake Calculator for EU</span>
+    </a>
+    <a class="top-link" href="https://casptracker.eu/" rel="noopener">CASP Tracker</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>Stake Calculator for EU</h1>
+    <p class="lead">Staking rewards Calculator for the EU. Pick a coin, enter an amount and see what OKX, Bybit and Kraken would pay, side by side.</p>
+  </section>
+
+  <noscript><p class="notice">This calculator needs JavaScript. The rates it uses are listed in <a href="data/rates.js">data/rates.js</a>.</p></noscript>
+
+  <section class="panel" aria-labelledby="h-inputs">
+    <h2 id="h-inputs" class="sr">Calculator inputs</h2>
+
+    <div class="field">
+      <span class="label" id="l-asset">Coin</span>
+      <div class="chips" id="asset-chips" role="radiogroup" aria-labelledby="l-asset"></div>
+    </div>
+
+    <div class="row">
+      <div class="field grow">
+        <label class="label" for="amount">Amount to stake</label>
+        <div class="amount">
+          <input id="amount" type="text" inputmode="decimal" autocomplete="off" value="10000" aria-describedby="amount-hint">
+          <div class="seg" id="unit-seg" role="radiogroup" aria-label="Amount unit">
+            <button type="button" role="radio" data-unit="eur" aria-checked="true">EUR</button>
+            <button type="button" role="radio" data-unit="coin" aria-checked="false" id="unit-coin">ETH</button>
+          </div>
+        </div>
+        <div class="presets" id="presets" aria-label="Quick amounts"></div>
+        <p class="hint" id="amount-hint"></p>
+      </div>
+
+      <div class="field grow">
+        <label class="label" for="months">Duration: <output id="months-out" for="months">12 months</output></label>
+        <input id="months" type="range" min="1" max="60" step="1" value="12">
+        <div class="presets" id="duration-presets" aria-label="Quick durations"></div>
+      </div>
+    </div>
+
+    <div class="row row-opts">
+      <div class="field" id="case-field" hidden>
+        <span class="label" id="l-case">Rate used</span>
+        <div class="seg" id="case-seg" role="radiogroup" aria-labelledby="l-case">
+          <button type="button" role="radio" data-case="low" aria-checked="false">Low</button>
+          <button type="button" role="radio" data-case="mid" aria-checked="true">Middle</button>
+          <button type="button" role="radio" data-case="high" aria-checked="false">High</button>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="compound" checked>
+        <span class="track" aria-hidden="true"></span>
+        <span>Reinvest rewards (compounding)</span>
+      </label>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-results">
+    <h2 id="h-results" class="sec-h">What you would earn <span class="sec-sub" id="results-sub"></span></h2>
+    <div class="cards" id="cards" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-growth">
+    <h2 id="h-growth" class="sec-h">Rewards over time</h2>
+    <p class="sec-note" id="growth-note"></p>
+    <div class="chart" id="growth-chart"></div>
+    <details class="table-det">
+      <summary>Show as table</summary>
+      <div class="table-wrap" id="growth-table"></div>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-range">
+    <h2 id="h-range" class="sec-h">Annual rate by exchange</h2>
+    <p class="sec-note" id="range-note"></p>
+    <div class="chart" id="range-chart"></div>
+  </section>
+
+  <section aria-labelledby="h-matrix">
+    <h2 id="h-matrix" class="sec-h">All rates at a glance</h2>
+    <p class="sec-note">Middle of the published range for each exchange's default product, after commission where one applies. Select a row to load that coin.</p>
+    <div class="table-wrap" id="matrix"></div>
+  </section>
+
+  <section class="about" aria-labelledby="h-about">
+    <h2 id="h-about" class="sec-h">How this is calculated</h2>
+    <ul class="plain">
+      <li>Rates are the figures each exchange published on its own public pages on <strong id="asof"></strong>. They change often and some include promotions or balance tiers. Check the source link on each card before you stake.</li>
+      <li>Amounts in EUR assume the coin's price stays the same. Real value moves with the market. Pick the coin as the unit to see rewards in coins instead.</li>
+      <li>With compounding on, rewards are reinvested monthly for an APR figure. A figure the exchange calls APY already includes compounding, so it is used as published. Bybit pays simple interest that does not compound, so the switch has no effect on it.</li>
+      <li>Kraken publishes its staking rates before its commission (25% on bonded staking, 30% on flexible, which also earns on at most half of the stake). The calculator applies both and shows the published figure next to the net one.</li>
+      <li>Fixed-term products are assumed to renew at the same rate. Rewards shown are before tax and before any fee the exchange does not include in its published rate.</li>
+      <li>The licence line comes from the ESMA register as listed on <a href="https://casptracker.eu/" rel="noopener">CASP Tracker</a>. Staking is not one of the ten MiCA services, so the exchange licence does not make a staking product regulated, guaranteed or insured. Each card says what its exchange states about the product.</li>
+    </ul>
+    <p class="fine">This is an information tool, not financial or tax advice. Staking carries risk, including price loss, lock-up and exchange risk.</p>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span>Stake Calculator for EU</span>
+    <span>A free tool by <a href="https://casptracker.eu/" rel="noopener">CASP Tracker</a>. Rates read on <span id="asof2"></span>.</span>
+  </div>
+</footer>
+
+<script src="data/rates.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
